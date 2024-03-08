@@ -3,6 +3,7 @@
 import socket
 import json
 import random
+from gates import G
 
 def init_socket(port):
     s = socket.socket()
@@ -10,21 +11,6 @@ def init_socket(port):
     s.settimeout(2)
     s.connect(('127.0.0.1', port))
     return s
-
-def AND(a, b):
-    return a & b
-
-def OR(a, b):
-    return a | b
-
-def NOT(a):
-    return int(not a)
-
-def G(bit1, bit2):
-    not_bit1 = NOT(bit1)
-    result = AND(not_bit1, bit2)
-    return NOT(result)
-
 
 
 class Alice_2in1_OT:
