@@ -3,6 +3,7 @@
 import socket
 import json
 import random
+import sys
 from gates import G
 
 def init_socket(port):
@@ -116,21 +117,25 @@ class Alice_GMW:
         z = za ^ zb
         return z
 
-# Define the prime number p and generator g
-p = 23
-g = 5
 
-sock = init_socket(20000)
+if __name__ == '__main__':
+    if len(sys.argv) < 2:
+        print('Usage: python3 alice.py <x> [<port>]')
+        exit(1)
 
-#alice = Alice_2in1_OT(p, g, 4, 0, sock)
-#alice.run_protocol()
-#alice = Alice_2in1_OT(p, g, 4, 0, sock)
-#alice.run_protocol()
+    x = int(sys.argv[1])
+    if len(sys.argv) == 3:
+        port = int(sys.argv[2])
+    else:
+        port = 12345
+    sock = init_socket(port)
 
-#Alice = Alice_nin1_OT(4, [1, 0, 1, 0], sock)
-#Alice.run_protocol()
+    # Define the prime number p and generator g
+    p = 23
+    g = 5
 
-Alice = Alice_GMW(0, sock)
-res = Alice.run_protocol()
-print('result from Alice: G(x, y) =', res)
-sock.close()
+
+    Alice = Alice_GMW(x, sock)
+    res = Alice.run_protocol()
+    print('result from Alice: G(x, y) =', res)
+    sock.close()

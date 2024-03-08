@@ -3,6 +3,7 @@
 import socket
 import random
 import json
+import sys
 
 def init_socket(port):
     s = socket.socket()
@@ -122,25 +123,24 @@ class Bob_GMW:
         z = za ^ zb
         return z
         
+if __name__ == '__main__':
+    if len(sys.argv) < 2:
+        print('Usage: python3 bob.py <y> [<port>]')
+        sys.exit(1)
+    
+    y = int(sys.argv[1])
+    if len(sys.argv) == 3:
+        port = int(sys.argv[2])
+    else:
+        port = 12345
+    sock = init_socket(port)
+    
+    # Define the prime number p and generator g
+    p = 23
+    g = 5
 
-# Define the prime number p and generator g
-p = 23
-g = 5
 
-sock = init_socket(20000)
-
-#Bob = Bob_nin1_OT(4, 3, sock)
-#res = Bob.run_protocol()
-#print(res)
-
-#bob = Bob_2in1_OT(p, g, 0, sock)
-#res = bob.run_protocol()
-#print(res)
-#bob = Bob_2in1_OT(p, g, 0, sock)
-#res = bob.run_protocol()
-#print(res)
-
-Bob = Bob_GMW(0, sock)
-res = Bob.run_protocol()
-print('result from Bob: G(x, y) =', res)
-sock.close()
+    Bob = Bob_GMW(y, sock)
+    res = Bob.run_protocol()
+    print('result from Bob: G(x, y) =', res)
+    sock.close()
