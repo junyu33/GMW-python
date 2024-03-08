@@ -14,6 +14,21 @@ def init_socket(port):
     print('Got connection from', addr)
     return c
 
+def AND(a, b):
+    return a & b
+
+def OR(a, b):
+    return a | b
+
+def NOT(a):
+    return int(not a)
+
+def G(bit1, bit2):
+    not_bit1 = NOT(bit1)
+    result = AND(not_bit1, bit2)
+    return NOT(result)
+
+
 class Bob_2in1_OT:
     def __init__(self, p, g, i, sock):
         self.p = p
@@ -88,15 +103,49 @@ class Bob_nin1_OT:
             xi ^= k[j]
         return xi
 
+class Bob_GMW:
+    def __init__(self, y, sock):
+        self.y = y
+        self.sock = sock
+
+    def send_number(self, number):
+        self.sock.send(str(number).encode())
+
+    def recv_number(self):
+        return int(self.sock.recv(1024).decode())
+
+    def run_protocol(self):
+        # step1: alice gen xa in [0, 1], xb = x xor xa, sned xb to bob
+        xb = self.recv_number()
+        
+        # step2: bob gen yb in [0, 1], ya = y xor yb, send ya to alice
+        yb = random.randint(0, 1)
+        ya = self.y ^ yb
+        self.send_number(ya)
+
+        # step4: operate 4 in 1 OT with bob, alice provide f00 to f11, bob provide index according to xb*2+yb
+        i = xb*2 + yb + 1 # don't forget to add 1, it's 1-indexed
+        bob = Bob_nin1_OT(4, i, self.sock)
+        zb = bob.run_protocol()
+
+        # step5: bob send zb = f(xb, yb) to alice
+        self.send_number(zb)
+
+        # step6: alice and bob reveal G(x, y) = za xor zb
+        za = self.recv_number()
+        z = za ^ zb
+        return z
+        
+
 # Define the prime number p and generator g
 p = 23
 g = 5
 
 sock = init_socket(20000)
 
-Bob = Bob_nin1_OT(4, 3, sock)
-res = Bob.run_protocol()
-print(res)
+#Bob = Bob_nin1_OT(4, 3, sock)
+#res = Bob.run_protocol()
+#print(res)
 
 #bob = Bob_2in1_OT(p, g, 0, sock)
 #res = bob.run_protocol()
@@ -104,3 +153,8 @@ print(res)
 #bob = Bob_2in1_OT(p, g, 0, sock)
 #res = bob.run_protocol()
 #print(res)
+
+Bob = Bob_GMW(0, sock)
+res = Bob.run_protocol()
+print('result from Bob: G(x, y) =', res)
+sock.close()

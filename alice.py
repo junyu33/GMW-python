@@ -11,6 +11,22 @@ def init_socket(port):
     s.connect(('127.0.0.1', port))
     return s
 
+def AND(a, b):
+    return a & b
+
+def OR(a, b):
+    return a | b
+
+def NOT(a):
+    return int(not a)
+
+def G(bit1, bit2):
+    not_bit1 = NOT(bit1)
+    result = AND(not_bit1, bit2)
+    return NOT(result)
+
+
+
 class Alice_2in1_OT:
     def __init__(self, p, g, v0, v1, sock):
         self.p = p
@@ -75,18 +91,60 @@ class Alice_nin1_OT:
             alice.run_protocol()
 
 
+class Alice_GMW:
+    def __init__(self, x, sock):
+        self.x = x
+        self.sock = sock
+
+    def send_number(self, number):
+        self.sock.send(str(number).encode())
+
+    def recv_number(self):
+        return int(self.sock.recv(1024).decode())
+
+    def run_protocol(self):
+        # step1: alice gen xa in [0, 1], xb = x xor xa, sned xb to bob
+        xa = random.randint(0, 1)
+        xb = self.x ^ xa
+        self.send_number(xb)
+        
+        # step2: bob gen yb in [0, 1], ya = y xor yb, send ya to alice
+        ya = self.recv_number()
+
+        # step3: alice gen za in [0, 1], enum f(xb, yb) = za xor G(xa^xb, ya^yb)
+        za = random.randint(0, 1)
+        f00 = za ^ G(xa^0, ya^0)
+        f01 = za ^ G(xa^0, ya^1)
+        f10 = za ^ G(xa^1, ya^0)
+        f11 = za ^ G(xa^1, ya^1)
+
+        # step4: operate 4 in 1 OT with bob, alice provide f00 to f11, bob provide index according to xb*2+yb
+        alice = Alice_nin1_OT(4, [f00, f01, f10, f11], self.sock)
+        alice.run_protocol()
+
+        # step5: bob send zb = f(xb, yb) to alice
+        zb = self.recv_number()
+
+        # step6: alice and bob reveal G(x, y) = za xor zb
+        self.send_number(za)
+        z = za ^ zb
+        return z
+
 # Define the prime number p and generator g
 p = 23
 g = 5
 
 sock = init_socket(20000)
 
-Alice = Alice_nin1_OT(4, [1, 0, 1, 0], sock)
-Alice.run_protocol()
-
-
 #alice = Alice_2in1_OT(p, g, 4, 0, sock)
 #alice.run_protocol()
 #alice = Alice_2in1_OT(p, g, 4, 0, sock)
 #alice.run_protocol()
 
+#Alice = Alice_nin1_OT(4, [1, 0, 1, 0], sock)
+#Alice.run_protocol()
+
+Alice = Alice_GMW(0, sock)
+res = Alice.run_protocol()
+print('result from Alice: G(x, y) =', res)
+sock.close()
