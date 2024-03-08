@@ -1,68 +1,92 @@
 #!/usr/bin/python3
 # alice.py
 import socket
-import random
 import json
+import random
 
-# Define the prime number p
-p = 23
-# Generate a generator g in Z_p field
-g = 5
-
-# values in alice
-v0 = 12
-v1 = 21
-# keys
-s = random.randint(1, p-1)
-r0 = random.randint(1, p-1)
-r1 = random.randint(1, p-1)
-
-def inv(x, p):
-    return pow(x, -1, p)
-
-def alice_init():
-    # Create a socket object
+def init_socket(port):
     s = socket.socket()
-    # help reuse the port immediately
     s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-    # set a timeout of 2 second
-    s.settimeout(2)  
-    # Define the port on which you want to connect
-    port = 12345
-    # Connect to the server on local computer
+    s.settimeout(2)
     s.connect(('127.0.0.1', port))
     return s
 
-def alice_send(s, number):
-    s.send(str(number).encode())
+class Alice_2in1_OT:
+    def __init__(self, p, g, v0, v1, sock):
+        self.p = p
+        self.g = g
+        self.s = random.randint(1, p-1)
+        self.r0 = random.randint(1, p-1)
+        self.r1 = random.randint(1, p-1)
+        self.v0 = v0
+        self.v1 = v1
+        self.sock = sock
 
-def alice_recv(s):
-    return int(s.recv(1024).decode())
+    def inv(self, x):
+        return pow(x, -1, self.p)
 
-def alice_send_json(s, json):
-    s.send(json.encode())
+    def send_number(self, number):
+        self.sock.send(str(number).encode())
 
-def alice_recv_json(s):
-    return json.loads(s.recv(1024).decode())
+    def recv_number(self):
+        return int(self.sock.recv(1024).decode())
 
-alice_sock = alice_init()
+    def send_json(self, data):
+        self.sock.send(json.dumps(data).encode())
+
+    def recv_json(self):
+        return json.loads(self.sock.recv(1024).decode())
+
+    def run_protocol(self):
+        # STEP 1: Alice -> Bob: gs = g**s
+        self.send_number(pow(self.g, self.s, self.p))
+
+        # STEP 3: Bob -> Alice: Li
+        Li = self.recv_number()
+
+        # Step 4: generate C0, C1
+        C0 = (pow(self.g, self.r0, self.p), pow(Li, self.r0, self.p) ^ self.v0)
+        C1 = (pow(self.g, self.r1, self.p), pow(pow(self.g, self.s, self.p) * self.inv(Li) % self.p, self.r1, self.p) ^ self.v1)
+
+        # Step 5: Alice -> Bob: C0, C1
+        self.send_json([C0, C1])
 
 
-# STEP 1: Alice -> Bob: gs = g**s
-alice_send(alice_sock, pow(g, s, p))
+class Alice_nin1_OT:
+    def __init__(self, n, x : list, sock):
+        self.n = n
+        self.x = [0] # add a dummy value to make the index start from 1
+        self.x.extend(x)
+        self.k = [0]
+        for i in range(self.n):
+            self.k.append(random.randint(0, 1))
+        self.sock = sock
 
-# STEP 3: Bob -> Alice: Li
-Li = alice_recv(alice_sock)
+    def run_protocol(self):
+        # alice and bob perform the 2-in-1 OT protocol for n times
+        v0 = self.x[0] 
+        for j in range(1, self.n + 1):
+            # v0 = k0 xor k1 xor ... xor k_{j-1} xor x[j]
+            v0 ^= self.k[j-1] ^ self.x[j-1] ^ self.x[j] 
+            # v1 = k[j]
+            v1 = self.k[j]
 
-# Step 4: generate C0, C1
-# C0 = (g**r0, Li**r0 ^ v0)
-# C1 = (g**r1, (gs/Li)**r1 ^ v1)
-C0 = (pow(g, r0, p), pow(Li, r0, p) ^ v0)
-C1 = (pow(g, r1, p), pow(pow(g, s, p) * inv(Li, p) % p, r1, p) ^ v1)
+            alice = Alice_2in1_OT(p, g, v0, v1, self.sock) # avoid port conflict
+            alice.run_protocol()
 
-# Step 5: Alice -> Bob: C0, C1
-alice_send_json(alice_sock, json.dumps([C0, C1]))
 
-# Close the connection
-alice_sock.close()
+# Define the prime number p and generator g
+p = 23
+g = 5
+
+sock = init_socket(20000)
+
+Alice = Alice_nin1_OT(4, [1, 0, 1, 0], sock)
+Alice.run_protocol()
+
+
+#alice = Alice_2in1_OT(p, g, 4, 0, sock)
+#alice.run_protocol()
+#alice = Alice_2in1_OT(p, g, 4, 0, sock)
+#alice.run_protocol()
 

@@ -4,77 +4,103 @@ import socket
 import random
 import json
 
-# pre-defined values
-p = 23
-g = 5
-
-# which one bob choose
-i = random.randint(0, 2)
-# key
-k = random.randint(1, p-1)
-
-def bob_init():
-    # Create a socket object
+def init_socket(port):
     s = socket.socket()
-    # help reuse the port immediately
     s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-    # set a timeout of 2 second
-    s.settimeout(2)  
-    # Define the port on which you want to listen
-    port = 12345
-    # Bind to the port
+    s.settimeout(2)
     s.bind(('127.0.0.1', port))
-    # Put the socket into listening mode
     s.listen(5)
-    # Wait for a connection from Alice
     c, addr = s.accept()
     print('Got connection from', addr)
     return c
 
-def bob_send(s, number):
-    s.send(str(number).encode())
+class Bob_2in1_OT:
+    def __init__(self, p, g, i, sock):
+        self.p = p
+        self.g = g
+        self.i = i
+        self.k = random.randint(1, p-1)
+        self.sock = sock
 
-def bob_recv(s):
-    return int(s.recv(1024).decode())
+    def inv(self, x):
+        return pow(x, -1, self.p)
 
-def alice_send_json(s, json):
-    s.send(json.encode())
+    def send_number(self, number):
+        self.sock.send(str(number).encode())
 
-def alice_recv_json(s):
-    return json.loads(s.recv(1024).decode())
+    def recv_number(self):
+        return int(self.sock.recv(1024).decode())
 
+    def send_json(self, data):
+        self.sock.send(json.dumps(data).encode())
 
-bob_sock = bob_init()
+    def recv_json(self):
+        return json.loads(self.sock.recv(1024).decode())
 
+    def run_protocol(self):
+        # STEP 1: Alice -> Bob : g**s 
+        gs = self.recv_number()
 
-# STEP 1: Alice -> Bob : g**s 
-gs = bob_recv(bob_sock)
+        # STEP 2: generate Li = g**k when i = 0, g**(s-k) otherwise
+        if self.i == 0:
+            Li = pow(self.g, self.k, self.p)
+        else:
+            Li = gs * pow(self.g, -self.k, self.p) % self.p
 
-# STEP 2: generate Li = g**k when i = 0, g**(s-k) otherwise
-Li = 0
-if i == 0:
-    Li = pow(g, k, p)
-else:
-    Li = gs * pow(g, -k, p) % p
+        # STEP 3: Bob -> Alice : Li
+        self.send_number(Li)
 
-# STEP 3: Bob -> Alice : Li
-bob_send(bob_sock, Li)
+        # STEP 5: Alice -> Bob : C0, C1
+        C0C1 = self.recv_json()
+        C0 = C0C1[0]
+        C1 = C0C1[1]
 
-# STEP 5: Alice -> Bob : C0, C1
-C0C1 = alice_recv_json(bob_sock)
-C0 = C0C1[0]
-C1 = C0C1[1]
+        # STEP 6: Bob decrypt v_i
+        if self.i == 0:
+            v = pow(C0[0], self.k, self.p) ^ C0[1]
+        else:
+            v = pow(C1[0], self.k, self.p) ^ C1[1]
+        # print('v_' + str(self.i) + ' =', v)
+        return v
 
-# STEP 6: Bob decrypt v_i
-# if i = 0, v0 = C0[0] ** k ^ C0[1]
-# if i = 1, v1 = C1[0] ** k ^ C1[1]
-v = 0
-if i == 0:
-    v = pow(C0[0], k, p) ^ C0[1]
-else:
-    v = pow(C1[0], k, p) ^ C1[1]
-print('v_' + str(i) + ' =', v)
+class Bob_nin1_OT:
+    def __init__(self, n, i, sock):
+        self.n = n
+        self.i = i
+        self.sock = sock
+    
+    def run_protocol(self):
+        # alice and bob perform the 2-in-1 OT protocol for n times
+        k = [] 
+        # if j == i, bob choose k0 xor k1 xor ... xor k_{j-1} xor x[j]
+        # otherwise, bob choose kj
+        for j in range(1, self.n + 1):
+            if j == self.i:
+                bob = Bob_2in1_OT(p, g, 0, self.sock) 
+                k.append(bob.run_protocol())
+            else:
+                bob = Bob_2in1_OT(p, g, 1, self.sock)
+                k.append(bob.run_protocol())
+        
+        # with a little calculation we know the xor sum of first i elements of k is x[i]
+        xi = 0
+        for j in range(0, self.i):
+            xi ^= k[j]
+        return xi
 
-# Close the connection
-bob_sock.close()
+# Define the prime number p and generator g
+p = 23
+g = 5
 
+sock = init_socket(20000)
+
+Bob = Bob_nin1_OT(4, 3, sock)
+res = Bob.run_protocol()
+print(res)
+
+#bob = Bob_2in1_OT(p, g, 0, sock)
+#res = bob.run_protocol()
+#print(res)
+#bob = Bob_2in1_OT(p, g, 0, sock)
+#res = bob.run_protocol()
+#print(res)
