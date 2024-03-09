@@ -2,12 +2,16 @@
 
 This is a simple implementation of the GMW protocol in python. The GMW protocol is a secure multi-party computation protocol that allows multiple parties to compute a function on their inputs without revealing their inputs to each other. 
 
+## requirements
+
+- python3.8+
+
 ## Usage
 
 modify your gates in the `gates.py` file, and then run `start.sh`. The result will be printed to the console.
 
 ```sh
-./start.sh <value of x> <value of y> [<port>]
+./start.sh <value of x> <value of y> [<ip>] [<port>]
 ```
 
 ## references
