@@ -2,7 +2,8 @@
 # set x to 1st argument, y to 2nd argument, and port to 3rd argument
 x=$1
 y=$2
-port=$3
+ip=$3
+port=$4
 
 # if x or y is not 0 or 1, then exit
 if [ $x -ne 0 ] && [ $x -ne 1 ]; then
@@ -17,8 +18,8 @@ fi
 
 # if port is a number, then call python with x, y, and port
 if [ $port -eq $port 2>/dev/null ]; then
-    ./bob.py $y 127.0.0.1 $port & 
-    ./alice.py $x 127.0.0.1 $port 
+    ./bob.py $y $ip $port & 
+    ./alice.py $x $ip $port 
 else
     ./bob.py $y &
     ./alice.py $x 

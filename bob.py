@@ -125,7 +125,7 @@ class Bob_GMW:
         
 if __name__ == '__main__':
     if len(sys.argv) < 2:
-        print('Usage: python3 bob.py <y> [<port>]')
+        print('Usage: python3 bob.py <y> [<ip of bob>] [<port>]')
         sys.exit(1)
     
     y = int(sys.argv[1])

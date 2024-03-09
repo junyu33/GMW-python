@@ -120,7 +120,7 @@ class Alice_GMW:
 
 if __name__ == '__main__':
     if len(sys.argv) < 2:
-        print('Usage: python3 alice.py <x> [<ip>] [<port>]')
+        print('Usage: python3 alice.py <x> [<ip of bob>] [<port>]')
         exit(1)
 
     x = int(sys.argv[1])
