@@ -17,8 +17,8 @@ fi
 
 # if port is a number, then call python with x, y, and port
 if [ $port -eq $port 2>/dev/null ]; then
-    ./bob.py $y $port & 
-    ./alice.py $x $port 
+    ./bob.py $y 127.0.0.1 $port & 
+    ./alice.py $x 127.0.0.1 $port 
 else
     ./bob.py $y &
     ./alice.py $x 
