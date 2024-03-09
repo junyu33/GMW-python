@@ -6,11 +6,11 @@ import random
 import sys
 from gates import G
 
-def init_socket(port):
+def init_socket(ip, port):
     s = socket.socket()
     s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
     s.settimeout(2)
-    s.connect(('127.0.0.1', port))
+    s.connect((ip, port))
     return s
 
 
@@ -120,15 +120,18 @@ class Alice_GMW:
 
 if __name__ == '__main__':
     if len(sys.argv) < 2:
-        print('Usage: python3 alice.py <x> [<port>]')
+        print('Usage: python3 alice.py <x> [<ip>] [<port>]')
         exit(1)
 
     x = int(sys.argv[1])
-    if len(sys.argv) == 3:
-        port = int(sys.argv[2])
+    port = 12345
+    if len(sys.argv) >= 3:
+        ip = sys.argv[2]
+        if len(sys.argv) >= 4:
+            port = int(sys.argv[3])
     else:
-        port = 12345
-    sock = init_socket(port)
+        ip = '127.0.0.1'
+    sock = init_socket(ip, port)
 
     # Define the prime number p and generator g
     p = 23
