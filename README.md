@@ -11,8 +11,10 @@ This is a simple implementation of the GMW protocol in python. The GMW protocol 
 modify your gates in the `gates.py` file, and then run `start.sh`. The result will be printed to the console.
 
 ```sh
-./start.sh <value of x> <value of y> [<ip of bob>] [<port>]
+./start.sh <person> <bit> [<ip of bob>] [<port>]
 ```
+
+where 0 stands for Alice and 1 stands for Bob in `person` arg. 
 
 ## references
 
