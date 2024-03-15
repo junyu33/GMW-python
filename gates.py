@@ -32,8 +32,6 @@ def sum_perbit(bit1, bit2, carry_in):
 
 # little endian
 def G_compare(x : list, y : list):
-    
-
     result0 = ge_perbit(x[0], y[0])
     result1 = OR(g_perbit(x[1], y[1]), AND(e_perbit(x[1], y[1]), result0))
     result2 = OR(g_perbit(x[2], y[2]), AND(e_perbit(x[2], y[2]), result1))
@@ -51,7 +49,4 @@ def G_sum(x : list, y : list):
     result2, carry2 = sum_perbit(x[2], y[2], carry1)
     result3, carry3 = sum_perbit(x[3], y[3], carry2)
     result4, carry4 = sum_perbit(x[4], y[4], carry3)
-    result5, carry5 = sum_perbit(x[5], y[5], carry4)
-    result6, carry6 = sum_perbit(x[6], y[6], carry5)
-    result7, carry7 = sum_perbit(x[7], y[7], carry6)
-    return [result0, result1, result2, result3, result4, result5, result6, result7]
+    return [result0, result1, result2, result3, result4]

@@ -110,7 +110,7 @@ class Bob_GMW:
         ya = self.y ^ yb
         self.send_number(ya)
 
-        # step4: operate 4**comm_bit in 1 OT with bob, alice provide f00...0 to f11...1, bob provide index according to xb*(2**comm_bit)+yb
+        # step4: operate 4**comm_bit in 1 OT with bob, alice provide f00 to f{2**comm_bit-1}{2**comm_bit-1}, bob provide index according to xb*(2**comm_bit)+yb
         i = xb*(2**comm_bit) + yb + 1 # don't forget to add 1, it's 1-indexed
         bob = Bob_nin1_OT(4**comm_bit, i, self.sock)
         zb = bob.run_protocol()
@@ -122,18 +122,20 @@ class Bob_GMW:
         za = self.recv_number()
         z = za ^ zb
         return z
+
         
 if __name__ == '__main__':
-    if len(sys.argv) < 2:
+    if len(sys.argv) < 3:
         print('Usage: python3 bob.py <y> [<ip of bob>] [<port>]')
         sys.exit(1)
     
-    y = int(sys.argv[1])
+    mode = sys.argv[1]
+    y = int(sys.argv[2])
     port = 12345
-    if len(sys.argv) >= 3:
-        ip = sys.argv[2]
-        if len(sys.argv) >= 4:
-            port = int(sys.argv[3])
+    if len(sys.argv) >= 4:
+        ip = sys.argv[3]
+        if len(sys.argv) >= 5:
+            port = int(sys.argv[4])
     else:
         ip = '127.0.0.1'
     sock = init_socket(ip, port)
