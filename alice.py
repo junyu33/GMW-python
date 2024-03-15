@@ -4,12 +4,12 @@ import socket
 import json
 import random
 import sys
-from gates import G
+from gates import G_compare
 
 def init_socket(ip, port):
     s = socket.socket()
     s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-    s.settimeout(2)
+    s.settimeout(60)
     s.connect((ip, port))
     return s
 
@@ -89,24 +89,35 @@ class Alice_GMW:
     def recv_number(self):
         return int(self.sock.recv(1024).decode())
 
+    def number2list(self, number):
+        res = []
+        for i in range(comm_bit):
+            res.append(number & 1)
+            number >>= 1
+        return res
+
     def run_protocol(self):
-        # step1: alice gen xa in [0, 1], xb = x xor xa, sned xb to bob
-        xa = random.randint(0, 1)
+        # step1: alice gen xa in [0, 2**comm_bit-1], xb = x xor xa, sned xb to bob
+        xa = random.randint(0, 2**comm_bit-1)
         xb = self.x ^ xa
         self.send_number(xb)
         
-        # step2: bob gen yb in [0, 1], ya = y xor yb, send ya to alice
+        # step2: bob gen yb in [0, 2**comm_bit-1], ya = y xor yb, send ya to alice
         ya = self.recv_number()
 
         # step3: alice gen za in [0, 1], enum f(xb, yb) = za xor G(xa^xb, ya^yb)
         za = random.randint(0, 1)
-        f00 = za ^ G(xa^0, ya^0)
-        f01 = za ^ G(xa^0, ya^1)
-        f10 = za ^ G(xa^1, ya^0)
-        f11 = za ^ G(xa^1, ya^1)
 
-        # step4: operate 4 in 1 OT with bob, alice provide f00 to f11, bob provide index according to xb*2+yb
-        alice = Alice_nin1_OT(4, [f00, f01, f10, f11], self.sock)
+        f = []
+
+        for possible_xb in range(2**comm_bit):
+            for possible_yb in range(2**comm_bit):
+                xa_xor_xb_list = self.number2list(xa^possible_xb)
+                ya_xor_yb_list = self.number2list(ya^possible_yb)
+                f.append(za ^ G_compare(xa_xor_xb_list, ya_xor_yb_list))
+
+        # step4: operate 4**comm_bit in 1 OT with bob, alice provide f00...0 to f11...1, bob provide index according to xb*(2**comm_bit)+yb
+        alice = Alice_nin1_OT(4**comm_bit, f, self.sock)
         alice.run_protocol()
 
         # step5: bob send zb = f(xb, yb) to alice
@@ -134,8 +145,9 @@ if __name__ == '__main__':
     sock = init_socket(ip, port)
 
     # Define the prime number p and generator g
-    p = 23
-    g = 5
+    p = 998244353
+    g = 3
+    comm_bit = 5
 
 
     Alice = Alice_GMW(x, sock)

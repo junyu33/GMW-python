@@ -102,17 +102,17 @@ class Bob_GMW:
         return int(self.sock.recv(1024).decode())
 
     def run_protocol(self):
-        # step1: alice gen xa in [0, 1], xb = x xor xa, sned xb to bob
+        # step1: alice gen xa in [0, 2**comm_bit-1], xb = x xor xa, sned xb to bob
         xb = self.recv_number()
         
-        # step2: bob gen yb in [0, 1], ya = y xor yb, send ya to alice
-        yb = random.randint(0, 1)
+        # step2: bob gen yb in [0, 2**comm_bit-1], ya = y xor yb, send ya to alice
+        yb = random.randint(0, 2**comm_bit-1)
         ya = self.y ^ yb
         self.send_number(ya)
 
-        # step4: operate 4 in 1 OT with bob, alice provide f00 to f11, bob provide index according to xb*2+yb
-        i = xb*2 + yb + 1 # don't forget to add 1, it's 1-indexed
-        bob = Bob_nin1_OT(4, i, self.sock)
+        # step4: operate 4**comm_bit in 1 OT with bob, alice provide f00...0 to f11...1, bob provide index according to xb*(2**comm_bit)+yb
+        i = xb*(2**comm_bit) + yb + 1 # don't forget to add 1, it's 1-indexed
+        bob = Bob_nin1_OT(4**comm_bit, i, self.sock)
         zb = bob.run_protocol()
 
         # step5: bob send zb = f(xb, yb) to alice
@@ -139,8 +139,9 @@ if __name__ == '__main__':
     sock = init_socket(ip, port)
     
     # Define the prime number p and generator g
-    p = 23
-    g = 5
+    p = 998244353
+    g = 3
+    comm_bit = 5
 
 
     Bob = Bob_GMW(y, sock)
